@@ -20,11 +20,13 @@ public Plugin:myinfo =
 new Handle:g_hMaxMoney;
 new Handle:g_hMaxMoney_value;
 new Handle:g_hMaxMoney_value_respect16k;
+new Handle:g_hMaxRounds;
 
 //Caching
 new g_iMaxMoney;
 new g_iMaxMoney_value;
 new bool:g_bMaxMoney_value_respect16k;
+new g_iPistolRound;
 
 //===== Forwards
 
@@ -50,6 +52,7 @@ public OnPluginStart()
 	"Respect 16k limit (if unsure, let '1') ?", 
 		FCVAR_PLUGIN | FCVAR_NOTIFY, true, 0.0, true, 1.0 );
 	
+	g_hMaxRounds = FindConVar( "mp_maxrounds" );
 	
 	AutoExecConfig(true, "maxmoneyafterxrounds");
 	
@@ -60,27 +63,34 @@ public OnPluginStart()
 	g_iMaxMoney = GetConVarInt( g_hMaxMoney );
 	g_iMaxMoney_value = GetConVarInt( g_hMaxMoney_value );
 	g_bMaxMoney_value_respect16k = GetConVarBool( g_hMaxMoney_value_respect16k );
+	g_iPistolRound = RoundToCeil( GetConVarInt( g_hMaxRounds ) / 2.0 );
+
 	HookConVarChange( g_hMaxMoney, ConVarChange_MaxMoney );
 	HookConVarChange( g_hMaxMoney_value, ConVarChange_MaxMoney_value );
 	HookConVarChange( g_hMaxMoney_value_respect16k, ConVarChange_MaxMoney_value_16k );
+	HookConVarChange( g_hMaxRounds, ConVarChange_MaxRounds );
 }
 
 //===== Events
 
 public Action:Event_PlayerSpawn( Handle:event, const String:name[], bool:dontBroadcast )
 {
-	if ( (g_iMaxMoney) && (GetTeamScore( 2 ) + GetTeamScore( 3 ) + 1 >= g_iMaxMoney) && GameRules_GetProp("m_totalRoundsPlayed") != 15)
+	if ( g_iMaxMoney > 0 )
 	{
-		new iClient = GetClientOfUserId( GetEventInt( event, "userid" ) );
-		if ( iClient && IsClientInGame( iClient ) )
+		new iRound = GameRules_GetProp("m_totalRoundsPlayed");
+		if ( g_iMaxMoney == 1 || (iRound != 0 && iRound != g_iPistolRound ) )
 		{
-			new shouldHaveCash = GetEntProp( iClient, Prop_Send, STR_ACCOUNT_PROP ) + g_iMaxMoney_value;
-			if ( shouldHaveCash > MAX_CASH && g_bMaxMoney_value_respect16k)
+			new iClient = GetClientOfUserId( GetEventInt( event, "userid" ) );
+			if ( iClient && IsClientInGame( iClient ) )
 			{
-				shouldHaveCash = MAX_CASH;
+				new shouldHaveCash = GetEntProp( iClient, Prop_Send, STR_ACCOUNT_PROP ) + g_iMaxMoney_value;
+				if ( shouldHaveCash > MAX_CASH && g_bMaxMoney_value_respect16k)
+				{
+					shouldHaveCash = MAX_CASH;
+				}
+				SetEntProp( iClient, Prop_Send, STR_ACCOUNT_PROP, shouldHaveCash);
+
 			}
-			SetEntProp( iClient, Prop_Send, STR_ACCOUNT_PROP, shouldHaveCash);
-			
 		}
 	}
 	
@@ -100,4 +110,8 @@ public ConVarChange_MaxMoney_value(Handle:convar, const String:oldValue[], const
 public ConVarChange_MaxMoney_value_16k(Handle:convar, const String:oldValue[], const String:newValue[])
 {
 	g_bMaxMoney_value_respect16k = GetConVarBool( g_hMaxMoney_value_respect16k );
+}
+public ConVarChange_MaxRounds(Handle:convar, const String:oldValue[], const String:newValue[])
+{
+	g_iPistolRound = RoundToCeil( GetConVarInt( g_hMaxRounds ) / 2.0 );
 }
