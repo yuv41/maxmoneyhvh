@@ -20,6 +20,7 @@ public Plugin:myinfo =
 new Handle:g_hMaxMoney;
 new Handle:g_hMaxMoney_value;
 new Handle:g_hMaxMoney_value_respect16k;
+new Handle:g_HalfTime;
 
 //Caching
 new g_iMaxMoney;
@@ -55,6 +56,7 @@ public OnPluginStart()
 	
 	//Hooks event
 	HookEvent( "player_spawn", Event_PlayerSpawn );
+	HookEvent( "announce_phase_end", Event_HalfTime ); 
 	
 	//Hooks ConVarChanges (caching)
 	g_iMaxMoney = GetConVarInt( g_hMaxMoney );
@@ -69,7 +71,7 @@ public OnPluginStart()
 
 public Action:Event_PlayerSpawn( Handle:event, const String:name[], bool:dontBroadcast )
 {
-	if ( (g_iMaxMoney) && (GetTeamScore( 2 ) + GetTeamScore( 3 ) + 1 >= g_iMaxMoney) && GameRules_GetProp("m_totalRoundsPlayed") != 15)
+	if ( (g_iMaxMoney) && (GetTeamScore( 2 ) + GetTeamScore( 3 ) + 1 >= g_iMaxMoney) && g_HalfTime != null)
 	{
 		new iClient = GetClientOfUserId( GetEventInt( event, "userid" ) );
 		if ( iClient && IsClientInGame( iClient ) )
@@ -85,6 +87,14 @@ public Action:Event_PlayerSpawn( Handle:event, const String:name[], bool:dontBro
 	}
 	
 	return Action:Plugin_Continue;
+}
+public Action:Event_HalfTime()
+{
+	g_HalfTime = CreateTimer(15.0, HalfTime_Callback);
+}
+Action HalfTime_Callback(Handle timer)
+{
+    g_HalfTime = null;
 }
 
 //===== ConVarChanges
